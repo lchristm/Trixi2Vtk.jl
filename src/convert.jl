@@ -101,7 +101,7 @@ function trixi2vtk(filename::AbstractString...;
 
     # Read mesh
     verbose && println("| Reading mesh file...")
-    @timeit "read mesh" mesh = Trixi.load_mesh_serial(meshfile; n_cells_max=0, RealT=Float64)
+    @timeit "read mesh" mesh, mpi_ranks = Trixi.load_mesh_serial(meshfile; n_cells_max=0, RealT=Float64)
 
     # Read data only if it is a data file
     if is_datafile
@@ -137,7 +137,7 @@ function trixi2vtk(filename::AbstractString...;
     verbose && println("| Adding data to VTK file...")
     @timeit "add data to VTK file" begin
       if save_celldata
-        add_celldata!(vtk_celldata, mesh, verbose)
+        add_celldata!(vtk_celldata, mesh, mpi_ranks, verbose)
       end
 
       # Only add data if it is a data file
@@ -309,7 +309,7 @@ function add_celldata!(vtk_celldata, mesh::UnstructuredMesh2D, verbose)
 end
 
 
-function add_celldata!(vtk_celldata, mesh::P4estMesh, verbose)
+function add_celldata!(vtk_celldata, mesh::P4estMesh, mpi_ranks, verbose)
   # Create temporary storage for the tree_ids and levels.
   tree_ids = zeros( Trixi.ncells(mesh) )
   cell_levels = zeros( Trixi.ncells(mesh) )
@@ -334,6 +334,8 @@ function add_celldata!(vtk_celldata, mesh::P4estMesh, verbose)
     @timeit "element_ids" vtk_celldata["element_ids"] = collect(1:Trixi.ncells(mesh))
     verbose && println("| | levels...")
     @timeit "levels" vtk_celldata["levels"] = cell_levels
+    verbose && println("| | mpi_ranks...")
+    @timeit "mpi_ranks" vtk_celldata["mpi_ranks"] = mpi_ranks
   end
 
   return vtk_celldata
